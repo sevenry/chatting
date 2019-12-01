@@ -1,0 +1,25 @@
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.ry.chatting";
+option java_outer_classname = "ChattingProto";
+option objc_class_prefix = "HLW";
+
+package chatting;
+
+// The greeting service definition.
+service ChatService {
+  // Sends a greeting
+  rpc Login (LoginRequest) returns (LoginReply) {}
+}
+
+// The request message containing the user's name.
+message LoginRequest {
+  string user = 1;
+}
+
+// The response message containing the greetings
+message LoginReply {
+  bool success = 1;
+}

@@ -5,23 +5,22 @@ package io.ry.chatting;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
-import io.ry.chatting.helloworld.GreeterGrpc;
-import io.ry.chatting.helloworld.HelloReply;
-import io.ry.chatting.helloworld.HelloRequest;
+import io.ry.chatting.ChatServiceGrpc;
+import io.ry.chatting.LoginRequest;
 
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
-public class HelloWorldClient {
-  private static final Logger logger = Logger.getLogger(HelloWorldClient.class.getName());
+public class ChattingClient {
+  private static final Logger logger = Logger.getLogger(ChattingClient.class.getName());
 
   private final ManagedChannel channel;
-  private final GreeterGrpc.GreeterBlockingStub blockingStub;
+  private final ChatServiceGrpc.ChatServiceBlockingStub blockingStub;
 
   /** Construct client connecting to HelloWorld server at {@code host:port}. */
-  public HelloWorldClient(String host, int port) {
+  public ChattingClient(String host, int port) {
     this(ManagedChannelBuilder.forAddress(host, port)
         // Channels are secure by default (via SSL/TLS). For the example we disable TLS to avoid
         // needing certificates.
@@ -30,9 +29,9 @@ public class HelloWorldClient {
   }
 
   /** Construct client for accessing HelloWorld server using the existing channel. */
-  HelloWorldClient(ManagedChannel channel) {
+  ChattingClient(ManagedChannel channel) {
     this.channel = channel;
-    blockingStub = GreeterGrpc.newBlockingStub(channel);
+    blockingStub = ChatServiceGrpc.newBlockingStub(channel);
   }
 
   public void shutdown() throws InterruptedException {
@@ -40,24 +39,21 @@ public class HelloWorldClient {
   }
 
   /** Say hello to server. */
-  public void greet(String name) {
-    logger.info("Will try to greet " + name + " ...");
-    HelloRequest request = HelloRequest.newBuilder().setName(name).build();
-    HelloReply response;
+  public void login(String name) {
+    LoginRequest request = LoginRequest.newBuilder().setUser(name).build();
+    LoginReply response;
     try {
-      response = blockingStub.sayHello(request);
+      response = blockingStub.login(request);
+      Boolean status = response.getSuccess();
+      if (status) System.out.println("login Success");
+      else {
+        System.out.println("Login Failed");
+        System.exit(0);
+      }
     } catch (StatusRuntimeException e) {
       logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
       return;
     }
-    logger.info("Greeting: " + response.getMessage());
-    try {
-      response = blockingStub.sayHelloAgain(request);
-    } catch (StatusRuntimeException e) {
-      logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
-      return;
-    }
-    logger.info("Greeting: " + response.getMessage());
   }
 
   /**
@@ -65,7 +61,7 @@ public class HelloWorldClient {
    * greeting.
    */
   public static void main(String[] args) throws Exception {
-    HelloWorldClient client = new HelloWorldClient("localhost", 50051);
+    ChattingClient client = new ChattingClient("localhost", 50051);
     try {
       for (int i=0; i < 10;i++) {
         /* Access a service running on the local machine on port 50051 */
@@ -73,7 +69,7 @@ public class HelloWorldClient {
         if (args.length > 0) {
           user = args[0]; /* Use the arg as the name to greet if provided */
         }
-        client.greet(user);
+        client.login(user);
       }} finally {
       client.shutdown();
     }
