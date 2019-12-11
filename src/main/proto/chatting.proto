@@ -12,6 +12,7 @@ package chatting;
 service ChatService {
   // Sends a greeting
   rpc Login (LoginRequest) returns (LoginReply) {}
+  rpc Talk (stream TalkRequest) returns (stream TalkReply) {}
 }
 
 // The request message containing the user's name.
@@ -22,4 +23,14 @@ message LoginRequest {
 // The response message containing the greetings
 message LoginReply {
   bool success = 1;
+}
+
+message TalkRequest {
+  string user = 1;
+  string content = 2;
+}
+
+message TalkReply {
+  string user = 1;
+  string content = 2;
 }
