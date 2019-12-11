@@ -7,12 +7,10 @@ import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 import io.ry.chatting.ChatServiceGrpc;
@@ -95,6 +93,7 @@ public class ChattingServer {
       this.replies = replies;
     }
 
+    private HashMap<String, StreamObserver<TalkReply> > records = new HashMap<String, StreamObserver<TalkReply> >();
 
     @Override
     public void login(LoginRequest req, StreamObserver<LoginReply> responseObserver) {
@@ -137,12 +136,16 @@ public class ChattingServer {
           // Process the request and send a response or an error.
           try {
             // Accept and enqueue the request.
-            String name = request.getUser();
-
-            String message = "Hello " + name;
-            logger.info("msg get : " + request.getContent());
-            TalkReply reply = TalkReply.newBuilder().setContent(message).build();
-            responseObserver.onNext(reply);
+            String currentUser = request.getUser();
+            if(!records.keySet().contains(currentUser)) {
+              records.put(currentUser, responseObserver);
+            }
+            String msg = request.getContent();
+            logger.info("msg get from "+request.getUser() + ", content is " + request.getContent());
+            TalkReply reply = TalkReply.newBuilder().setUser(currentUser).setContent(msg).build();
+            for (String user: records.keySet()){
+              records.get(user).onNext(reply);
+            }
 
             // Check the provided ServerCallStreamObserver to see if it is still ready to accept more messages.
             if (serverCallStreamObserver.isReady()) {

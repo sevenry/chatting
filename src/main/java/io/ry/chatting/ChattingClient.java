@@ -12,7 +12,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+import io.grpc.stub.StreamObserver;
 
 public class ChattingClient {
   private static final Logger logger = Logger.getLogger(ChattingClient.class.getName());
@@ -43,7 +43,7 @@ public class ChattingClient {
   }
 
   /** Say hello to server. */
-  public void login() {
+  public String  login() {
     Scanner scan = new Scanner(System.in);  //创建Scanner扫描器来封装System类的in输入流
     System.out.println("请输入用户名：");
     name = scan.nextLine();
@@ -58,14 +58,16 @@ public class ChattingClient {
         System.out.println("Login Failed");
         System.exit(0);
       }
+      return name;
     } catch (StatusRuntimeException e) {
       logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
-      return;
+      throw e;
     }
   }
 
-  public void talk(final CountDownLatch done ) {
-    ClientResponseObserver<TalkRequest, TalkReply> clientResponseObserver =
+  public StreamObserver<TalkRequest>  talk(final CountDownLatch done ) {
+
+      ClientResponseObserver<TalkRequest, TalkReply> clientResponseObserver =
             new ClientResponseObserver<TalkRequest, TalkReply>() {
 
               ClientCallStreamObserver<TalkRequest> requestStream;
@@ -81,18 +83,10 @@ public class ChattingClient {
                   public void run() {
                     // Start generating values from where we left off on a non-gRPC thread.
                       while (requestStream.isReady()) {
-
-                          System.out.println("请输入消息：");
-
-                          Scanner scan = new Scanner(System.in);  //创建Scanner扫描器来封装System类的in输入流
-
-                          String msg = scan.next();
-                          logger.info("msg is " + msg);
-
-                          TalkRequest request = TalkRequest.newBuilder().setUser(name).setContent(msg).build();
+                          //System.out.println("请回车确认开始聊天：");
+                          TalkRequest request = TalkRequest.newBuilder().setUser(name).setContent("").build();
                           requestStream.onNext(request);
-
-
+                          break;
                       }
                   }
                 });
@@ -100,8 +94,11 @@ public class ChattingClient {
 
               @Override
               public void onNext(TalkReply value) {
-                logger.info("<-- " + value.getContent());
-                requestStream.request(1);
+                  // logger.info("user is " + value.getUser() + ", msg is " + value.getContent());
+                  if (!name.equals(value.getUser())) {
+                      System.out.println(value.getUser() + "：" + value.getContent());
+                  }
+                  requestStream.request(1);
               }
 
               @Override
@@ -117,12 +114,9 @@ public class ChattingClient {
               }
             };
 
-    chatServiceStub.talk(clientResponseObserver);
-      try {
-          done.await();
-      } catch (Exception e){
-          logger.info("------ await error");
-      }
+      StreamObserver<TalkRequest> request = chatServiceStub.talk(clientResponseObserver);
+
+      return request;
 
   }
 
@@ -135,12 +129,16 @@ public class ChattingClient {
       final CountDownLatch done = new CountDownLatch(1);
       try {
         /* Access a service running on the local machine on port 50051 */
-        String user = "world";
-        if (args.length > 0) {
-          user = args[0]; /* Use the arg as the name to greet if provided */
+
+        String name = client.login();
+          StreamObserver<TalkRequest> requestStream = client.talk(done);
+        while (true) {
+            System.out.println("请输入消息：");
+            Scanner scan = new Scanner(System.in);  //创建Scanner扫描器来封装System类的in输入流
+            String msg = scan.nextLine();
+            TalkRequest request = TalkRequest.newBuilder().setUser(name).setContent(msg).build();
+            requestStream.onNext(request);
         }
-        client.login();
-        client.talk(done);
       } finally {
       client.shutdown();
     }
