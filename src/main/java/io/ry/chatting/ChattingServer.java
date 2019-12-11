@@ -137,14 +137,16 @@ public class ChattingServer {
           try {
             // Accept and enqueue the request.
             String currentUser = request.getUser();
-            if(!records.keySet().contains(currentUser)) {
+            if(!request.getType()) {
               records.put(currentUser, responseObserver);
-            }
-            String msg = request.getContent();
-            logger.info("msg get from "+request.getUser() + ", content is " + request.getContent());
-            TalkReply reply = TalkReply.newBuilder().setUser(currentUser).setContent(msg).build();
-            for (String user: records.keySet()){
-              records.get(user).onNext(reply);
+            } else {
+              String msg = request.getContent();
+              logger.info("msg get from "+request.getUser() + ", content is " + request.getContent());
+              TalkReply reply = TalkReply.newBuilder().setUser(currentUser).setContent(msg).build();
+
+              for (String user: records.keySet()){
+                  records.get(user).onNext(reply);
+                }
             }
 
             // Check the provided ServerCallStreamObserver to see if it is still ready to accept more messages.

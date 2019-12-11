@@ -28,6 +28,7 @@ message LoginReply {
 message TalkRequest {
   string user = 1;
   string content = 2;
+  bool type = 3;
 }
 
 message TalkReply {
